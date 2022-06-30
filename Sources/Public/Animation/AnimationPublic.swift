@@ -203,6 +203,44 @@ extension Animation {
       task.resume()
     }
   }
+    
+    static func loadedFromWithJSON(url: URL,
+                                   closure: @escaping  ((AnimationWithJson?) -> Void),
+                                   animationCache: AnimationCacheProvider?) {
+        
+        if let animationCache = animationCache, let animation = animationCache.animation(forKey: url.absoluteString) {
+            closure(nil)
+        } else {
+            let task = URLSession.shared.dataTask(with: url) { (data, response, error) in
+                guard error == nil, let jsonData = data else {
+                    DispatchQueue.main.async {
+                        closure(nil)
+                    }
+                    return
+                }
+                do {
+                    let animation = try JSONDecoder().decode(Animation.self, from: jsonData)
+                    
+                    let dictionary = try JSONSerialization.jsonObject(with: jsonData) as? Dictionary<String,Any>
+                    
+                    DispatchQueue.main.async {
+                        animationCache?.setAnimation(animation, forKey: url.absoluteString)
+                        let anim = AnimationWithJson()
+                        anim.animation = animation
+                        anim.jsonDictionary = dictionary
+                        closure(anim)
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        closure(nil)
+                    }
+                }
+                
+            }
+            task.resume()
+        }
+    }
+  
 
   // MARK: Animation (Helpers)
 
@@ -266,4 +304,11 @@ extension Animation {
   public func frameTime(forTime time: TimeInterval) -> AnimationFrameTime {
     CGFloat(time * framerate) + startFrame
   }
+}
+
+public class AnimationWithJson{
+    
+    public var jsonDictionary: Dictionary<String,Any>?
+    public var animation: Animation?
+    
 }
