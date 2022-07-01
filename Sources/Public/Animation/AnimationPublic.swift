@@ -204,7 +204,7 @@ extension Animation {
     }
   }
     
-    static func loadedFromWithJSON(url: URL,
+    public static func loadedFromWithJSON(url: URL,
                                    closure: @escaping  ((AnimationWithJson?) -> Void),
                                    animationCache: AnimationCacheProvider?) {
         
