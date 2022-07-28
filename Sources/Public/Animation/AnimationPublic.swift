@@ -231,14 +231,51 @@ extension Animation {
                         closure(anim)
                     }
                 } catch {
-                    DispatchQueue.main.async {
-                        closure(nil)
+                    
+                    if let htlmPage = String(data: jsonData,encoding: .utf8), htlmPage.lowercased().contains("lottie="){
+                        if let urlString = getTextIntoTags(string: htlmPage, openTag: "lottie=", closedTag: ".json"), let url = URL(string: urlString){
+                            loadedFromWithJSON(url: url, closure: closure, animationCache: animationCache)
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            closure(nil)
+                        }
                     }
                 }
                 
             }
             task.resume()
         }
+    }
+    
+    static func getTextIntoTags(string: String, openTag: String, closedTag: String) -> String?{
+        guard string.contains(openTag) && string.contains(closedTag) else {return nil}
+        let pattern = "\(openTag)(.*?)\(closedTag)";
+        do {
+            let regexMatcher = try NSRegularExpression(pattern: pattern, options: [])
+            let matchColl = regexMatcher.matches(in: string, options: [], range: range(of: string))
+
+            for match in matchColl {
+                guard let matchrange = Range(match.range, in: string) else { return nil }
+                let subString = string[matchrange.lowerBound..<matchrange.upperBound]
+                let stringAttributed = NSMutableAttributedString(string: String(subString))
+                stringAttributed.replaceCharacters(in: range(of: openTag), with: "")
+                var stringFinal = stringAttributed.string
+                stringFinal = stringFinal.replacingOccurrences(of: "\\", with: "")
+                stringFinal = stringFinal.replacingOccurrences(of: "\"", with: "")
+                return stringFinal
+            }
+            return nil
+            
+        }
+        catch {
+            return nil
+        }
+    }
+    
+    static func range(of string: String) -> NSRange{
+        return NSRange.init(0..<string.count)
+        
     }
   
 
