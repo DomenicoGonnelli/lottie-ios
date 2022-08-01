@@ -236,8 +236,8 @@ extension Animation {
             } catch {
                 
                 if let htlmPage = String(data: jsonData,encoding: .utf8), htlmPage.lowercased().contains("lottie="){
-                    if let urlString = getTextIntoTags(string: htlmPage, openTag: "lottie=", closedTag: ".json"), let url = URL(string: urlString){
-                        loadedFromWithJSON(url: url, closure: closure, animationCache: animationCache)
+                    if let urlString = getTextIntoTags(string: htlmPage, openTag: "lottie=", closedTag: ".json"){
+                        loadedFromWithJSON(url: urlString, json: nil, closure: closure, animationCache: animationCache)
                     }
                 } else {
                     DispatchQueue.main.async {
