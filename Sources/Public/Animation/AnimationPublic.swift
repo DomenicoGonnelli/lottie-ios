@@ -349,4 +349,14 @@ public class AnimationWithJson{
     public var jsonDictionary: Dictionary<String,Any>?
     public var animation: Animation?
     
+    public init(){}
+    
+    public init(data: String?){
+        guard let json = data?.data(using: .ascii) else {
+            return
+        }
+        
+        jsonDictionary = try? JSONSerialization.jsonObject(with: json) as? Dictionary<String,Any>
+        animation = try? Animation.from(data: json, strategy: .dictionaryBased)
+    }
 }
