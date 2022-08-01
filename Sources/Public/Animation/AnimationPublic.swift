@@ -204,48 +204,49 @@ extension Animation {
     }
   }
     
-    public static func loadedFromWithJSON(url: URL,
-                                   closure: @escaping  ((AnimationWithJson?) -> Void),
-                                   animationCache: AnimationCacheProvider?) {
-        
-        if let animationCache = animationCache, let animation = animationCache.animation(forKey: url.absoluteString) {
+    public static func loadedFromWithJSON(url: String?, json: String?,
+                                          closure: @escaping  ((AnimationWithJson?) -> Void),
+                                          animationCache: AnimationCacheProvider?) {
+        let animation = AnimationWithJson(data: json)
+        if let _ = animation.animation{
+            closure(animation)
+            return
+        }
+        guard let urlStirng = url, let urlTask = URL(string: urlStirng) else {
             closure(nil)
-        } else {
-            let task = URLSession.shared.dataTask(with: url) { (data, response, error) in
-                guard error == nil, let jsonData = data else {
+            return
+        }
+        let task = URLSession.shared.dataTask(with: urlTask) { (data, response, error) in
+            guard error == nil, let jsonData = data else {
+                DispatchQueue.main.async {
+                    closure(nil)
+                }
+                return
+            }
+            do {
+                let animation = try JSONDecoder().decode(Animation.self, from: jsonData)
+                let dictionary = try JSONSerialization.jsonObject(with: jsonData) as? Dictionary<String,Any>
+                DispatchQueue.main.async {
+                    //animationCache?.setAnimation(animation, forKey: url.absoluteString)
+                    let anim = AnimationWithJson()
+                    anim.animation = animation
+                    anim.jsonDictionary = dictionary
+                    closure(anim)
+                }
+            } catch {
+                
+                if let htlmPage = String(data: jsonData,encoding: .utf8), htlmPage.lowercased().contains("lottie="){
+                    if let urlString = getTextIntoTags(string: htlmPage, openTag: "lottie=", closedTag: ".json"), let url = URL(string: urlString){
+                        loadedFromWithJSON(url: url, closure: closure, animationCache: animationCache)
+                    }
+                } else {
                     DispatchQueue.main.async {
                         closure(nil)
                     }
-                    return
                 }
-                do {
-                    let animation = try JSONDecoder().decode(Animation.self, from: jsonData)
-                    
-                    let dictionary = try JSONSerialization.jsonObject(with: jsonData) as? Dictionary<String,Any>
-                    
-                    DispatchQueue.main.async {
-                        animationCache?.setAnimation(animation, forKey: url.absoluteString)
-                        let anim = AnimationWithJson()
-                        anim.animation = animation
-                        anim.jsonDictionary = dictionary
-                        closure(anim)
-                    }
-                } catch {
-                    
-                    if let htlmPage = String(data: jsonData,encoding: .utf8), htlmPage.lowercased().contains("lottie="){
-                        if let urlString = getTextIntoTags(string: htlmPage, openTag: "lottie=", closedTag: ".json"), let url = URL(string: urlString){
-                            loadedFromWithJSON(url: url, closure: closure, animationCache: animationCache)
-                        }
-                    } else {
-                        DispatchQueue.main.async {
-                            closure(nil)
-                        }
-                    }
-                }
-                
             }
-            task.resume()
         }
+        task.resume()
     }
     
     static func getTextIntoTags(string: String, openTag: String, closedTag: String) -> String?{
