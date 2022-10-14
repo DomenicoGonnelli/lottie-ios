@@ -235,9 +235,13 @@ extension Animation {
                 }
             } catch {
                 
-                if let htlmPage = String(data: jsonData,encoding: .utf8), htlmPage.lowercased().contains("lottie="){
-                    if let urlString = getTextIntoTags(string: htlmPage, openTag: "lottie=", closedTag: ".json"){
+                if let htlmPage = String(data: jsonData,encoding: .utf8), htlmPage.lowercased().contains("lottie"){
+                    if let urlString = getTextIntoTags(string: htlmPage, openTag: "=", closedTag: ".json"){
                         loadedFromWithJSON(url: urlString, json: nil, closure: closure, animationCache: animationCache)
+                    } else {
+                        DispatchQueue.main.async {
+                            closure(nil)
+                        }
                     }
                 } else {
                     DispatchQueue.main.async {
@@ -264,7 +268,9 @@ extension Animation {
                 var stringFinal = stringAttributed.string
                 stringFinal = stringFinal.replacingOccurrences(of: "\\", with: "")
                 stringFinal = stringFinal.replacingOccurrences(of: "\"", with: "")
-                return stringFinal
+                if stringFinal.contains("https") && stringFinal.contains("asset"){
+                    return stringFinal
+                }
             }
             return nil
             
