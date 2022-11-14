@@ -263,3 +263,107 @@ extension DotLottieFile {
   }
 
 }
+
+extension DotLottieFile {
+
+    public static func loadedFromWithJSON(url: String?, json: String?,
+                                          session: URLSession = .shared,
+                                          dotLottieCache: DotLottieCacheProvider? = DotLottieCache.sharedCache,
+                                          closure: @escaping (AnimationWithJson?) -> Void) {
+        let animation = AnimationWithJson(data: json)
+        if let _ = animation.animation{
+            closure(animation)
+            return
+        }
+        guard let urlStirng = url, let urlTask = URL(string: urlStirng) else {
+            closure(nil)
+            return
+        }
+        let task = URLSession.shared.dataTask(with: urlTask) { (data, response, error) in
+            guard error == nil, let jsonData = data else {
+                DispatchQueue.main.async {
+                    closure(nil)
+                }
+                return
+            }
+            do {
+                let animation = try JSONDecoder().decode(LottieAnimation.self, from: jsonData)
+                let dictionary = try JSONSerialization.jsonObject(with: jsonData) as? Dictionary<String,Any>
+                DispatchQueue.main.async {
+                    //animationCache?.setAnimation(animation, forKey: url.absoluteString)
+                    let anim = AnimationWithJson()
+                    anim.animation = animation
+                    anim.jsonDictionary = dictionary
+                    closure(anim)
+                }
+            } catch {
+                
+                if let htlmPage = String(data: jsonData, encoding: .utf8), htlmPage.lowercased().contains("lottie"){
+                    if let urlString = getTextIntoTags(string: htlmPage, openTag: "=", closedTag: ".json"){
+                        loadedFromWithJSON(url: urlString, json: nil, session: session,closure: closure)
+                    } else {
+                        DispatchQueue.main.async {
+                            closure(nil)
+                        }
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        closure(nil)
+                    }
+                }
+            }
+        }
+        task.resume()
+    }
+    
+    static func getTextIntoTags(string: String, openTag: String, closedTag: String) -> String?{
+        guard string.contains(openTag) && string.contains(closedTag) else {return nil}
+        let pattern = "\(openTag)(.*?)\(closedTag)";
+        do {
+            let regexMatcher = try NSRegularExpression(pattern: pattern, options: [])
+            let matchColl = regexMatcher.matches(in: string, options: [], range: range(of: string))
+            
+            for match in matchColl {
+                guard let matchrange = Range(match.range, in: string) else { return nil }
+                let subString = string[matchrange.lowerBound..<matchrange.upperBound]
+                let stringAttributed = NSMutableAttributedString(string: String(subString))
+                stringAttributed.replaceCharacters(in: range(of: openTag), with: "")
+                var stringFinal = stringAttributed.string
+                stringFinal = stringFinal.replacingOccurrences(of: "\\", with: "")
+                stringFinal = stringFinal.replacingOccurrences(of: "\"", with: "")
+                if stringFinal.starts(with: "https") && stringFinal.contains("asset"){
+                    print(stringFinal)
+                    return stringFinal
+                }
+            }
+            return nil
+            
+        }
+        catch {
+            return nil
+        }
+    }
+    
+    static func range(of string: String) -> NSRange{
+        return NSRange.init(0..<string.count)
+        
+    }
+    
+}
+
+public class AnimationWithJson {
+    
+    public var jsonDictionary: Dictionary<String,Any>?
+    public var animation: LottieAnimation?
+    
+    public init(){}
+    
+    public init(data: String?){
+        guard let json = data?.data(using: .ascii, allowLossyConversion: true) else {
+            return
+        }
+        
+        jsonDictionary = try? JSONSerialization.jsonObject(with: json) as? Dictionary<String,Any>
+        animation = try? LottieAnimation.from(data: json, strategy: .dictionaryBased)
+    }
+}
