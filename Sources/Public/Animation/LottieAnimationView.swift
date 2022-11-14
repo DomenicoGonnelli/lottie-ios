@@ -57,6 +57,7 @@ public enum LottieBackgroundBehavior {
 public enum LottieLoopMode {
   /// Animation is played once then stops.
   case playOnce
+  case reverse
   /// Animation will loop from beginning to end until stopped.
   case loop
   /// Animation will play forward, then backwards and loop until stopped.
@@ -1336,8 +1337,10 @@ final public class LottieAnimationView: LottieAnimationViewBase {
         // is based on `playFrom` and `playTo`, this automatically truncates the
         // duration (so the animation stops playing at `playFrom`).
         case .playOnce:
-          animationContext.playFrom = currentFrame
-
+            animationContext.playFrom = currentFrame
+        case .reverse:
+            animationContext.playFrom = upperBoundTime
+            animationContext.playTo = lowerBoundTime
         // When looping, we specifically _don't_ want to affect the duration of the animation,
         // since that would affect the duration of all subsequent loops. We just want to adjust
         // the duration of the _first_ loop. Instead of setting `playFrom`, we just add a `timeOffset`
@@ -1430,6 +1433,8 @@ extension LottieLoopMode {
       return (repeatCount: amount, autoreverses: false)
     case .repeatBackwards(let amount):
       return (repeatCount: amount, autoreverses: true)
+    case .reverse:
+        return (repeatCount: 1, autoreverses: trues)
     }
   }
 }
