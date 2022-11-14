@@ -1434,7 +1434,7 @@ extension LottieLoopMode {
     case .repeatBackwards(let amount):
       return (repeatCount: amount, autoreverses: true)
     case .reverse:
-        return (repeatCount: 1, autoreverses: trues)
+        return (repeatCount: 1, autoreverses: true)
     }
   }
 }
