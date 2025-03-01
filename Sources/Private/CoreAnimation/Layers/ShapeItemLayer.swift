@@ -67,7 +67,7 @@ final class ShapeItemLayer: BaseAnimationLayer {
   override func setupAnimations(context: LayerAnimationContext) throws {
     try super.setupAnimations(context: context)
 
-    guard let sublayerConfiguration = sublayerConfiguration else { return }
+    guard let sublayerConfiguration else { return }
 
     switch sublayerConfiguration.fill {
     case .solidFill(let shapeLayer):
@@ -92,6 +92,8 @@ final class ShapeItemLayer: BaseAnimationLayer {
     let gradientAlphaLayer: GradientRenderLayer?
     /// The `CAShapeLayer` that clips the gradient layers to the expected shape
     let shapeMaskLayer: CAShapeLayer
+    /// The top-most `CAShapeLayer` used to render `Stroke`s over the gradient if necessary
+    let overlayLayer: CAShapeLayer?
   }
 
   /// The configuration of this layer's `fill` sublayers
@@ -116,19 +118,19 @@ final class ShapeItemLayer: BaseAnimationLayer {
     // We have to build a different layer hierarchy depending on if
     // we're rendering a gradient (a `CAGradientLayer` masked by a `CAShapeLayer`)
     // or a solid shape (a simple `CAShapeLayer`).
-    let fillLayerConfiguration: FillLayerConfiguration
-    if let gradientFill = otherItems.first(GradientFill.self) {
-      fillLayerConfiguration = setupGradientFillLayerHierarchy(for: gradientFill)
-    } else {
-      fillLayerConfiguration = setupSolidFillLayerHierarchy()
-    }
+    let fillLayerConfiguration: FillLayerConfiguration =
+      if let gradientFill = otherItems.first(GradientFill.self) {
+        setupGradientFillLayerHierarchy(for: gradientFill)
+      } else {
+        setupSolidFillLayerHierarchy()
+      }
 
-    let gradientStrokeConfiguration: GradientLayers?
-    if let gradientStroke = otherItems.first(GradientStroke.self) {
-      gradientStrokeConfiguration = setupGradientStrokeLayerHierarchy(for: gradientStroke)
-    } else {
-      gradientStrokeConfiguration = nil
-    }
+    let gradientStrokeConfiguration: GradientLayers? =
+      if let gradientStroke = otherItems.first(GradientStroke.self) {
+        setupGradientStrokeLayerHierarchy(for: gradientStroke)
+      } else {
+        nil
+      }
 
     sublayerConfiguration = (fillLayerConfiguration, gradientStrokeConfiguration)
   }
@@ -150,12 +152,22 @@ final class ShapeItemLayer: BaseAnimationLayer {
     for gradientFill: GradientFill)
     -> FillLayerConfiguration
   {
+    let container = BaseAnimationLayer()
+    let pathContainer = BaseAnimationLayer()
+
     let pathMask = CAShapeLayer()
     pathMask.fillColor = .rgb(0, 0, 0)
-    mask = pathMask
+    pathContainer.mask = pathMask
 
     let rgbGradientLayer = GradientRenderLayer()
-    addSublayer(rgbGradientLayer)
+    pathContainer.addSublayer(rgbGradientLayer)
+    container.addSublayer(pathContainer)
+
+    let overlayLayer = CAShapeLayer()
+    overlayLayer.fillColor = nil
+    container.addSublayer(overlayLayer)
+
+    addSublayer(container)
 
     let alphaGradientLayer: GradientRenderLayer?
     if gradientFill.hasAlphaComponent {
@@ -168,7 +180,8 @@ final class ShapeItemLayer: BaseAnimationLayer {
     return .gradientFill(GradientLayers(
       gradientColorLayer: rgbGradientLayer,
       gradientAlphaLayer: alphaGradientLayer,
-      shapeMaskLayer: pathMask))
+      shapeMaskLayer: pathMask,
+      overlayLayer: overlayLayer))
   }
 
   private func setupGradientStrokeLayerHierarchy(
@@ -197,7 +210,8 @@ final class ShapeItemLayer: BaseAnimationLayer {
     return GradientLayers(
       gradientColorLayer: rgbGradientLayer,
       gradientAlphaLayer: alphaGradientLayer,
-      shapeMaskLayer: pathMask)
+      shapeMaskLayer: pathMask,
+      overlayLayer: nil)
   }
 
   private func setupSolidFillAnimations(
@@ -206,7 +220,7 @@ final class ShapeItemLayer: BaseAnimationLayer {
     throws
   {
     var trimPathMultiplier: PathMultiplier? = nil
-    if let (trim, context) = otherItems.first(Trim.self, context: context) {
+    if let (trim, context) = otherItems.first(Trim.self, where: { !$0.isEmpty }, context: context) {
       trimPathMultiplier = try shapeLayer.addAnimations(for: trim, context: context)
 
       try context.compatibilityAssert(
@@ -237,16 +251,23 @@ final class ShapeItemLayer: BaseAnimationLayer {
     context: LayerAnimationContext)
     throws
   {
-    try layers.shapeMaskLayer.addAnimations(
-      for: shape.item,
-      context: context.for(shape),
-      pathMultiplier: 1,
-      roundedCorners: otherItems.first(RoundedCorners.self))
+    let pathLayers = [layers.shapeMaskLayer, layers.overlayLayer]
+    for pathLayer in pathLayers {
+      try pathLayer?.addAnimations(
+        for: shape.item,
+        context: context.for(shape),
+        pathMultiplier: 1,
+        roundedCorners: otherItems.first(RoundedCorners.self))
+    }
 
     if let (gradientFill, context) = otherItems.first(GradientFill.self, context: context) {
       layers.shapeMaskLayer.fillRule = gradientFill.fillRule.caFillRule
       try layers.gradientColorLayer.addGradientAnimations(for: gradientFill, type: .rgb, context: context)
       try layers.gradientAlphaLayer?.addGradientAnimations(for: gradientFill, type: .alpha, context: context)
+    }
+
+    if let (stroke, context) = otherItems.first(Stroke.self, context: context) {
+      try layers.overlayLayer?.addStrokeAnimations(for: stroke, context: context)
     }
   }
 
@@ -278,14 +299,16 @@ final class ShapeItemLayer: BaseAnimationLayer {
 
 // MARK: - [ShapeItem] helpers
 
-extension Array where Element == ShapeItemLayer.Item {
+extension [ShapeItemLayer.Item] {
   /// The first `ShapeItem` in this array of the given type
   func first<ItemType: ShapeItem>(
-    _: ItemType.Type, context: LayerAnimationContext)
+    _: ItemType.Type,
+    where condition: (ItemType) -> Bool = { _ in true },
+    context: LayerAnimationContext)
     -> (item: ItemType, context: LayerAnimationContext)?
   {
     for item in self {
-      if let match = item.item as? ItemType {
+      if let match = item.item as? ItemType, condition(match) {
         return (match, context.for(item))
       }
     }

@@ -62,14 +62,14 @@ extension LottieAnimationView {
     animationCache: AnimationCacheProvider? = LottieAnimationCache.shared,
     configuration: LottieConfiguration = .shared)
   {
-    if let animationCache = animationCache, let animation = animationCache.animation(forKey: url.absoluteString) {
+    if let animationCache, let animation = animationCache.animation(forKey: url.absoluteString) {
       self.init(animation: animation, imageProvider: imageProvider, configuration: configuration)
       closure(nil)
     } else {
       self.init(animation: nil, imageProvider: imageProvider, configuration: configuration)
 
       LottieAnimation.loadedFrom(url: url, session: session, closure: { animation in
-        if let animation = animation {
+        if let animation {
           self.animation = animation
           closure(nil)
         } else {
@@ -122,6 +122,7 @@ extension LottieAnimationView {
       case .success(let dotLottieFile):
         self.loadAnimation(animationId, from: dotLottieFile)
         completion?(self, nil)
+
       case .failure(let error):
         completion?(self, error)
       }
@@ -147,6 +148,7 @@ extension LottieAnimationView {
       case .success(let dotLottieFile):
         self.loadAnimation(animationId, from: dotLottieFile)
         completion?(self, nil)
+
       case .failure(let error):
         completion?(self, error)
       }
@@ -166,7 +168,7 @@ extension LottieAnimationView {
     session: URLSession = .shared,
     completion: ((LottieAnimationView, Error?) -> Void)? = nil)
   {
-    if let dotLottieCache = dotLottieCache, let lottie = dotLottieCache.file(forKey: url.absoluteString) {
+    if let dotLottieCache, let lottie = dotLottieCache.file(forKey: url.absoluteString) {
       self.init(dotLottie: lottie, animationId: animationId, configuration: configuration)
       completion?(self, nil)
     } else {
@@ -176,6 +178,7 @@ extension LottieAnimationView {
         case .success(let lottie):
           self.loadAnimation(animationId, from: lottie)
           completion?(self, nil)
+
         case .failure(let error):
           completion?(self, error)
         }
@@ -203,6 +206,7 @@ extension LottieAnimationView {
       case .success(let dotLottieFile):
         self.loadAnimation(animationId, from: dotLottieFile)
         completion?(self, nil)
+
       case .failure(let error):
         completion?(self, error)
       }

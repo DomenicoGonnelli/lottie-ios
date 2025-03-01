@@ -9,16 +9,13 @@ import Foundation
 
 // MARK: - DotLottieUtils
 
-struct DotLottieUtils {
+enum DotLottieUtils {
   static let dotLottieExtension = "lottie"
   static let jsonExtension = "json"
 
   /// Temp folder to app directory
   static var tempDirectoryURL: URL {
-    if #available(iOS 10.0, *) {
-      return FileManager.default.temporaryDirectory
-    }
-    return URL(fileURLWithPath: NSTemporaryDirectory())
+    FileManager.default.temporaryDirectory
   }
 }
 
@@ -52,7 +49,18 @@ extension FileManager {
 // MARK: - DotLottieError
 
 public enum DotLottieError: Error {
+  /// URL response has no data.
+  case noDataLoaded
+  /// Asset with this name was not found in the provided bundle.
+  case assetNotFound(name: String, bundle: Bundle?)
+  /// Animation loading from asset was not supported on macOS 10.10,
+  /// but this error is no longer used.
+  case loadingFromAssetNotSupported
+
+  @available(*, deprecated, message: "Unused")
   case invalidFileFormat
+  @available(*, deprecated, message: "Unused")
   case invalidData
+  @available(*, deprecated, message: "Unused")
   case animationNotAvailable
 }

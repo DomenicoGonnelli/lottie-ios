@@ -5,8 +5,6 @@
 //  Created by Brandon Withrow on 1/8/19.
 //
 
-import Foundation
-
 // MARK: - TrimType
 
 enum TrimType: Int, Codable {
@@ -25,7 +23,7 @@ final class Trim: ShapeItem {
     start = try container.decode(KeyframeGroup<LottieVector1D>.self, forKey: .start)
     end = try container.decode(KeyframeGroup<LottieVector1D>.self, forKey: .end)
     offset = try container.decode(KeyframeGroup<LottieVector1D>.self, forKey: .offset)
-    trimType = try container.decode(TrimType.self, forKey: .trimType)
+    trimType = try container.decodeIfPresent(TrimType.self, forKey: .trimType) ?? .individually
     try super.init(from: decoder)
   }
 
@@ -36,9 +34,9 @@ final class Trim: ShapeItem {
     end = try KeyframeGroup<LottieVector1D>(dictionary: endDictionary)
     let offsetDictionary: [String: Any] = try dictionary.value(for: CodingKeys.offset)
     offset = try KeyframeGroup<LottieVector1D>(dictionary: offsetDictionary)
-    let trimTypeRawValue: Int = try dictionary.value(for: CodingKeys.trimType)
+    let trimTypeRawValue: Int = try dictionary.value(for: CodingKeys.trimType) ?? TrimType.individually.rawValue
     guard let trimType = TrimType(rawValue: trimTypeRawValue) else {
-      throw InitializableError.invalidInput
+      throw InitializableError.invalidInput()
     }
     self.trimType = trimType
     try super.init(dictionary: dictionary)
@@ -56,6 +54,14 @@ final class Trim: ShapeItem {
   let offset: KeyframeGroup<LottieVector1D>
 
   let trimType: TrimType
+
+  /// If this trim doesn't affect the path at all then we can consider it empty
+  var isEmpty: Bool {
+    start.keyframes.count == 1
+      && start.keyframes[0].value.value == 0
+      && end.keyframes.count == 1
+      && end.keyframes[0].value.value == 100
+  }
 
   override func encode(to encoder: Encoder) throws {
     try super.encode(to: encoder)
@@ -75,3 +81,10 @@ final class Trim: ShapeItem {
     case trimType = "m"
   }
 }
+
+// MARK: @unchecked Sendable
+
+/// `Trim` inherits `@unchecked Sendable` from `ShapeItem` and
+/// we need to restate that here to avoid a warning in Xcode 16
+// swiftlint:disable:next no_unchecked_sendable
+extension Trim: @unchecked Sendable { }

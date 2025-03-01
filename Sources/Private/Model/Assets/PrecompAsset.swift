@@ -5,7 +5,7 @@
 //  Created by Brandon Withrow on 1/9/19.
 //
 
-import Foundation
+// MARK: - PrecompAsset
 
 final class PrecompAsset: Asset {
 
@@ -38,3 +38,10 @@ final class PrecompAsset: Asset {
     try container.encode(layers, forKey: .layers)
   }
 }
+
+// MARK: @unchecked Sendable
+
+/// `PrecompAsset` inherits `@unchecked Sendable` from `Asset` and
+/// we need to restate that here to avoid a warning in Xcode 16
+// swiftlint:disable:next no_unchecked_sendable
+extension PrecompAsset: @unchecked Sendable { }

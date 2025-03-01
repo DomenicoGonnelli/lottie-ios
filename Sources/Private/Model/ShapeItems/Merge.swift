@@ -5,11 +5,9 @@
 //  Created by Brandon Withrow on 1/8/19.
 //
 
-import Foundation
-
 // MARK: - MergeMode
 
-enum MergeMode: Int, Codable {
+enum MergeMode: Int, Codable, Sendable {
   case none
   case merge
   case add
@@ -33,7 +31,7 @@ final class Merge: ShapeItem {
   required init(dictionary: [String: Any]) throws {
     let modeRawType: Int = try dictionary.value(for: CodingKeys.mode)
     guard let mode = MergeMode(rawValue: modeRawType) else {
-      throw InitializableError.invalidInput
+      throw InitializableError.invalidInput()
     }
     self.mode = mode
     try super.init(dictionary: dictionary)
@@ -56,3 +54,10 @@ final class Merge: ShapeItem {
     case mode = "mm"
   }
 }
+
+// MARK: @unchecked Sendable
+
+/// `Merge` inherits `@unchecked Sendable` from `ShapeItem` and
+/// we need to restate that here to avoid a warning in Xcode 16
+// swiftlint:disable:next no_unchecked_sendable
+extension Merge: @unchecked Sendable { }

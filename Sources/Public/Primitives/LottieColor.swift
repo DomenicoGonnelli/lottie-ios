@@ -5,8 +5,6 @@
 //  Created by Brandon Withrow on 2/4/19.
 //
 
-import Foundation
-
 // MARK: - ColorFormatDenominator
 
 public enum ColorFormatDenominator: Hashable {
@@ -17,11 +15,11 @@ public enum ColorFormatDenominator: Hashable {
   var value: Double {
     switch self {
     case .One:
-      return 1.0
+      1.0
     case .OneHundred:
-      return 100.0
+      100.0
     case .TwoFiftyFive:
-      return 255.0
+      255.0
     }
   }
 }

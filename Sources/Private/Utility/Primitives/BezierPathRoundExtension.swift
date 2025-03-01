@@ -30,7 +30,7 @@ import Foundation
 //    shape's vertex distances and the roundedness set in the animation.
 
 extension CompoundBezierPath {
-  // Round corners of a compound bezier
+  /// Round corners of a compound bezier
   func roundCorners(radius: CGFloat) -> CompoundBezierPath {
     var newPaths = [BezierPath]()
     for path in paths {
@@ -43,7 +43,7 @@ extension CompoundBezierPath {
 }
 
 extension BezierPath {
-  // Computes a new `BezierPath` with each corner rounded based on the given `radius`
+  /// Computes a new `BezierPath` with each corner rounded based on the given `radius`
   func roundCorners(radius: CGFloat) -> BezierPath {
     var newPath = BezierPath()
     var uniquePath = BezierPath()
@@ -83,6 +83,8 @@ extension BezierPath {
       uniquePath.addVertex(elements[i].vertex)
     }
 
+    var pathHasRoundedCorner = false
+
     for elementIndex in 0..<uniquePath.elements.count {
       currentVertex = uniquePath.elements[elementIndex].vertex
 
@@ -90,11 +92,14 @@ extension BezierPath {
         currentVertex.point.x == currentVertex.outTangent.x,
         currentVertex.point.y == currentVertex.outTangent.y,
         currentVertex.point.x == currentVertex.inTangent.x,
-        currentVertex.point.y == currentVertex.inTangent.y else
-      {
+        currentVertex.point.y == currentVertex.inTangent.y
+      else {
         newPath.addVertex(currentVertex)
         continue
       }
+
+      // Track whether or not this path has at least one rounded corner
+      pathHasRoundedCorner = true
 
       // Do not round start and end if not closed
       if !newPath.closed, elementIndex == 0 || elementIndex == uniquePath.elements.count - 1 {
@@ -140,6 +145,12 @@ extension BezierPath {
             CGPoint(x: vX, y: vY),
             CGPoint(x: oX, y: oY)))
       }
+    }
+
+    // If we didn't need to apply the corner radius to any of the corners,
+    // just use the original given path instead of modifying it.
+    if !pathHasRoundedCorner {
+      return self
     }
 
     return newPath

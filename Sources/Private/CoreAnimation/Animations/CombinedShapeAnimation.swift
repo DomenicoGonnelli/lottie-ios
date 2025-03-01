@@ -14,7 +14,7 @@ extension CAShapeLayer {
   {
     try addAnimation(
       for: .path,
-      keyframes: combinedShapes.shapes.keyframes,
+      keyframes: combinedShapes.shapes,
       value: { paths in
         let combinedPath = CGMutablePath()
         for path in paths {
@@ -82,3 +82,10 @@ extension CombinedShapeItem {
       name: name)
   }
 }
+
+// MARK: Sendable
+
+/// `CombinedShapeItem` inherits `@unchecked Sendable` from `ShapeItem` and
+/// we need to restate that here to avoid a warning in Xcode 16
+// swiftlint:disable:next no_unchecked_sendable
+extension CombinedShapeItem: @unchecked Sendable { }

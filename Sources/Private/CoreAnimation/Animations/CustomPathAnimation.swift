@@ -20,7 +20,7 @@ extension CAShapeLayer {
 
     try addAnimation(
       for: .path,
-      keyframes: combinedKeyframes.keyframes,
+      keyframes: combinedKeyframes,
       value: { pathKeyframe in
         var path = pathKeyframe.path
         if let cornerRadius = pathKeyframe.cornerRadius {
@@ -53,7 +53,7 @@ extension CGPath {
 // MARK: - BezierPathKeyframe
 
 /// Data that represents how to render a bezier path at a specific point in time
-struct BezierPathKeyframe {
+struct BezierPathKeyframe: Interpolatable {
   let path: BezierPath
   let cornerRadius: LottieVector1D?
 
@@ -61,11 +61,11 @@ struct BezierPathKeyframe {
   /// that can have different counts / timing parameters
   static func combining(
     path: KeyframeGroup<BezierPath>,
-    cornerRadius: KeyframeGroup<LottieVector1D>?) throws
-    -> KeyframeGroup<BezierPathKeyframe>
+    cornerRadius: KeyframeGroup<LottieVector1D>?)
+    throws -> KeyframeGroup<BezierPathKeyframe>
   {
     guard
-      let cornerRadius = cornerRadius,
+      let cornerRadius,
       cornerRadius.keyframes.contains(where: { $0.value.cgFloatValue > 0 })
     else {
       return path.map { path in
@@ -76,5 +76,11 @@ struct BezierPathKeyframe {
     return Keyframes.combined(
       path, cornerRadius,
       makeCombinedResult: BezierPathKeyframe.init)
+  }
+
+  func interpolate(to: BezierPathKeyframe, amount: CGFloat) -> BezierPathKeyframe {
+    BezierPathKeyframe(
+      path: path.interpolate(to: to.path, amount: amount),
+      cornerRadius: cornerRadius.interpolate(to: to.cornerRadius, amount: amount))
   }
 }

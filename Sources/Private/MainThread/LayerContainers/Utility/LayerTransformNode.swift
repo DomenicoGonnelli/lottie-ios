@@ -5,8 +5,6 @@
 //  Created by Brandon Withrow on 2/4/19.
 //
 
-import CoreGraphics
-import Foundation
 import QuartzCore
 
 // MARK: - LayerTransformProperties
@@ -18,14 +16,19 @@ final class LayerTransformProperties: NodePropertyMap, KeypathSearchable {
   init(transform: Transform) {
     anchor = NodeProperty(provider: KeyframeInterpolator(keyframes: transform.anchorPoint.keyframes))
     scale = NodeProperty(provider: KeyframeInterpolator(keyframes: transform.scale.keyframes))
-    rotation = NodeProperty(provider: KeyframeInterpolator(keyframes: transform.rotation.keyframes))
+    rotationX = NodeProperty(provider: KeyframeInterpolator(keyframes: transform.rotationX.keyframes))
+    rotationY = NodeProperty(provider: KeyframeInterpolator(keyframes: transform.rotationY.keyframes))
+    rotationZ = NodeProperty(provider: KeyframeInterpolator(keyframes: transform.rotationZ.keyframes))
     opacity = NodeProperty(provider: KeyframeInterpolator(keyframes: transform.opacity.keyframes))
 
     var propertyMap: [String: AnyNodeProperty] = [
-      "Anchor Point" : anchor,
-      "Scale" : scale,
-      "Rotation" : rotation,
-      "Opacity" : opacity,
+      "Anchor Point": anchor,
+      PropertyName.scale.rawValue: scale,
+      PropertyName.rotation.rawValue: rotationZ,
+      "Rotation X": rotationX,
+      "Rotation Y": rotationY,
+      "Rotation Z": rotationZ,
+      PropertyName.opacity.rawValue: opacity,
     ]
 
     if
@@ -41,7 +44,7 @@ final class LayerTransformProperties: NodePropertyMap, KeypathSearchable {
       position = nil
     } else if let positionKeyframes = transform.position?.keyframes {
       let position: NodeProperty<LottieVector3D> = NodeProperty(provider: KeyframeInterpolator(keyframes: positionKeyframes))
-      propertyMap["Position"] = position
+      propertyMap[PropertyName.position.rawValue] = position
       self.position = position
       positionX = nil
       positionY = nil
@@ -64,7 +67,9 @@ final class LayerTransformProperties: NodePropertyMap, KeypathSearchable {
 
   let anchor: NodeProperty<LottieVector3D>
   let scale: NodeProperty<LottieVector3D>
-  let rotation: NodeProperty<LottieVector1D>
+  let rotationX: NodeProperty<LottieVector1D>
+  let rotationY: NodeProperty<LottieVector1D>
+  let rotationZ: NodeProperty<LottieVector1D>
   let position: NodeProperty<LottieVector3D>?
   let positionX: NodeProperty<LottieVector1D>?
   let positionY: NodeProperty<LottieVector1D>?
@@ -114,23 +119,25 @@ class LayerTransformNode: AnimatorNode {
   func rebuildOutputs(frame _: CGFloat) {
     opacity = Float(transformProperties.opacity.value.cgFloatValue) * 0.01
 
-    let position: CGPoint
-    if let point = transformProperties.position?.value.pointValue {
-      position = point
-    } else if
-      let xPos = transformProperties.positionX?.value.cgFloatValue,
-      let yPos = transformProperties.positionY?.value.cgFloatValue
-    {
-      position = CGPoint(x: xPos, y: yPos)
-    } else {
-      position = .zero
-    }
+    let position: CGPoint =
+      if let point = transformProperties.position?.value.pointValue {
+        point
+      } else if
+        let xPos = transformProperties.positionX?.value.cgFloatValue,
+        let yPos = transformProperties.positionY?.value.cgFloatValue
+      {
+        CGPoint(x: xPos, y: yPos)
+      } else {
+        .zero
+      }
 
     localTransform = CATransform3D.makeTransform(
       anchor: transformProperties.anchor.value.pointValue,
       position: position,
       scale: transformProperties.scale.value.sizeValue,
-      rotation: transformProperties.rotation.value.cgFloatValue,
+      rotationX: transformProperties.rotationX.value.cgFloatValue,
+      rotationY: transformProperties.rotationY.value.cgFloatValue,
+      rotationZ: transformProperties.rotationZ.value.cgFloatValue,
       skew: nil,
       skewAxis: nil)
 

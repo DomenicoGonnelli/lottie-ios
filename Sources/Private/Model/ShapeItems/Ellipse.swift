@@ -5,8 +5,6 @@
 //  Created by Brandon Withrow on 1/8/19.
 //
 
-import Foundation
-
 // MARK: - PathDirection
 
 enum PathDirection: Int, Codable {
@@ -72,3 +70,10 @@ final class Ellipse: ShapeItem {
     case size = "s"
   }
 }
+
+// MARK: @unchecked Sendable
+
+/// `Ellipse` inherits `@unchecked Sendable` from `ShapeItem` and
+/// we need to restate that here to avoid a warning in Xcode 16
+// swiftlint:disable:next no_unchecked_sendable
+extension Ellipse: @unchecked Sendable { }

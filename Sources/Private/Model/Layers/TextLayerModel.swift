@@ -5,7 +5,7 @@
 //  Created by Brandon Withrow on 1/8/19.
 //
 
-import Foundation
+// MARK: - TextLayerModel
 
 /// A layer that holds text.
 final class TextLayerModel: LayerModel {
@@ -56,3 +56,10 @@ final class TextLayerModel: LayerModel {
     case animators = "a"
   }
 }
+
+// MARK: @unchecked Sendable
+
+/// `TextLayerModel` inherits `@unchecked Sendable` from `LayerModel` and
+/// we need to restate that here to avoid a warning in Xcode 16
+// swiftlint:disable:next no_unchecked_sendable
+extension TextLayerModel: @unchecked Sendable { }

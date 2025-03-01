@@ -5,11 +5,9 @@
 //  Created by Brandon Withrow on 1/8/19.
 //
 
-import Foundation
-
 // MARK: - LineCap
 
-enum LineCap: Int, Codable {
+enum LineCap: Int, Codable, Sendable {
   case none
   case butt
   case round
@@ -18,7 +16,7 @@ enum LineCap: Int, Codable {
 
 // MARK: - LineJoin
 
-enum LineJoin: Int, Codable {
+enum LineJoin: Int, Codable, Sendable {
   case none
   case miter
   case round
@@ -60,7 +58,7 @@ final class GradientStroke: ShapeItem {
     endPoint = try KeyframeGroup<LottieVector3D>(dictionary: endPointDictionary)
     let gradientRawType: Int = try dictionary.value(for: CodingKeys.gradientType)
     guard let gradient = GradientType(rawValue: gradientRawType) else {
-      throw InitializableError.invalidInput
+      throw InitializableError.invalidInput()
     }
     gradientType = gradient
     if let highlightLengthDictionary = dictionary[CodingKeys.highlightLength.rawValue] as? [String: Any] {
@@ -99,6 +97,39 @@ final class GradientStroke: ShapeItem {
     let dashPatternDictionaries = dictionary[CodingKeys.dashPattern.rawValue] as? [[String: Any]]
     dashPattern = try? dashPatternDictionaries?.map { try DashElement(dictionary: $0) }
     try super.init(dictionary: dictionary)
+  }
+
+  init(
+    name: String,
+    hidden: Bool,
+    opacity: KeyframeGroup<LottieVector1D>,
+    startPoint: KeyframeGroup<LottieVector3D>,
+    endPoint: KeyframeGroup<LottieVector3D>,
+    gradientType: GradientType,
+    highlightLength: KeyframeGroup<LottieVector1D>?,
+    highlightAngle: KeyframeGroup<LottieVector1D>?,
+    numberOfColors: Int,
+    colors: KeyframeGroup<[Double]>,
+    width: KeyframeGroup<LottieVector1D>,
+    lineCap: LineCap,
+    lineJoin: LineJoin,
+    miterLimit: Double,
+    dashPattern: [DashElement]?)
+  {
+    self.opacity = opacity
+    self.startPoint = startPoint
+    self.endPoint = endPoint
+    self.gradientType = gradientType
+    self.highlightLength = highlightLength
+    self.highlightAngle = highlightAngle
+    self.numberOfColors = numberOfColors
+    self.colors = colors
+    self.width = width
+    self.lineCap = lineCap
+    self.lineJoin = lineJoin
+    self.miterLimit = miterLimit
+    self.dashPattern = dashPattern
+    super.init(name: name, type: .gradientStroke, hidden: hidden)
   }
 
   // MARK: Internal
@@ -142,6 +173,26 @@ final class GradientStroke: ShapeItem {
   /// The dash pattern of the stroke
   let dashPattern: [DashElement]?
 
+  /// Creates a copy of this GradientStroke with the given updated width keyframes
+  func copy(width newWidth: KeyframeGroup<LottieVector1D>) -> GradientStroke {
+    GradientStroke(
+      name: name,
+      hidden: hidden,
+      opacity: opacity,
+      startPoint: startPoint,
+      endPoint: endPoint,
+      gradientType: gradientType,
+      highlightLength: highlightLength,
+      highlightAngle: highlightAngle,
+      numberOfColors: numberOfColors,
+      colors: colors,
+      width: newWidth,
+      lineCap: lineCap,
+      lineJoin: lineJoin,
+      miterLimit: miterLimit,
+      dashPattern: dashPattern)
+  }
+
   override func encode(to encoder: Encoder) throws {
     try super.encode(to: encoder)
     var container = encoder.container(keyedBy: CodingKeys.self)
@@ -183,3 +234,10 @@ final class GradientStroke: ShapeItem {
     case colors = "k"
   }
 }
+
+// MARK: @unchecked Sendable
+
+/// `GradientStroke` inherits `@unchecked Sendable` from `ShapeItem` and
+/// we need to restate that here to avoid a warning in Xcode 16
+// swiftlint:disable:next no_unchecked_sendable
+extension GradientStroke: @unchecked Sendable { }

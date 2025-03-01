@@ -5,7 +5,7 @@
 //  Created by Brandon Withrow on 1/8/19.
 //
 
-import Foundation
+// MARK: - Rectangle
 
 final class Rectangle: ShapeItem {
 
@@ -70,3 +70,10 @@ final class Rectangle: ShapeItem {
     case cornerRadius = "r"
   }
 }
+
+// MARK: @unchecked Sendable
+
+/// `Rectangle` inherits `@unchecked Sendable` from `ShapeItem` and
+/// we need to restate that here to avoid a warning in Xcode 16
+// swiftlint:disable:next no_unchecked_sendable
+extension Rectangle: @unchecked Sendable { }

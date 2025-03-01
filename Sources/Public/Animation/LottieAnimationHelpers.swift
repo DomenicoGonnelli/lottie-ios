@@ -50,7 +50,7 @@ extension LottieAnimation {
 
     /// Check cache for animation
     if
-      let animationCache = animationCache,
+      let animationCache,
       let animation = animationCache.animation(forKey: cacheKey)
     {
       /// If found, return the animation.
@@ -59,9 +59,7 @@ extension LottieAnimation {
 
     do {
       /// Decode animation.
-      guard let json = try bundle.getAnimationData(name, subdirectory: subdirectory) else {
-        return nil
-      }
+      let json = try bundle.getAnimationData(name, subdirectory: subdirectory)
       let animation = try LottieAnimation.from(data: json)
       animationCache?.setAnimation(animation, forKey: cacheKey)
       return animation
@@ -84,7 +82,7 @@ extension LottieAnimation {
   {
     /// Check cache for animation
     if
-      let animationCache = animationCache,
+      let animationCache,
       let animation = animationCache.animation(forKey: filepath)
     {
       return animation
@@ -97,7 +95,10 @@ extension LottieAnimation {
       animationCache?.setAnimation(animation, forKey: filepath)
       return animation
     } catch {
-      /// Decoding Error.
+      LottieLogger.shared.warn("""
+        Failed to load animation from filepath \(filepath)
+        with underlying error: \(error.localizedDescription)
+        """)
       return nil
     }
   }
@@ -118,25 +119,26 @@ extension LottieAnimation {
 
     /// Check cache for animation
     if
-      let animationCache = animationCache,
+      let animationCache,
       let animation = animationCache.animation(forKey: cacheKey)
     {
       /// If found, return the animation.
       return animation
     }
 
-    /// Load jsonData from Asset
-    guard let json = Data.jsonData(from: name, in: bundle) else {
-      return nil
-    }
-
     do {
+      /// Load jsonData from Asset
+      let json = try Data(assetName: name, in: bundle)
       /// Decode animation.
       let animation = try LottieAnimation.from(data: json)
       animationCache?.setAnimation(animation, forKey: cacheKey)
       return animation
     } catch {
-      /// Decoding error.
+      LottieLogger.shared.warn("""
+        Failed to load animation with asset name \(name)
+        in \(bundle.bundlePath)
+        with underlying error: \(error.localizedDescription)
+        """)
       return nil
     }
   }
@@ -158,7 +160,7 @@ extension LottieAnimation {
     case .dictionaryBased:
       let json = try JSONSerialization.jsonObject(with: data)
       guard let dict = json as? [String: Any] else {
-        throw InitializableError.invalidInput
+        throw InitializableError.invalidInput()
       }
       return try LottieAnimation(dictionary: dict)
     }
@@ -169,12 +171,11 @@ extension LottieAnimation {
   /// - Parameter url: The url to load the animation from.
   /// - Parameter animationCache: A cache for holding loaded animations. Defaults to `LottieAnimationCache.shared`. Optional.
   ///
-  @available(iOS 13.0, macOS 10.15, tvOS 13.0, *)
   public static func loadedFrom(
     url: URL,
     session: URLSession = .shared,
-    animationCache: AnimationCacheProvider? = LottieAnimationCache.shared) async
-    -> LottieAnimation?
+    animationCache: AnimationCacheProvider? = LottieAnimationCache.shared)
+    async -> LottieAnimation?
   {
     await withCheckedContinuation { continuation in
       LottieAnimation.loadedFrom(
@@ -199,7 +200,7 @@ extension LottieAnimation {
     closure: @escaping LottieAnimation.DownloadClosure,
     animationCache: AnimationCacheProvider? = LottieAnimationCache.shared)
   {
-    if let animationCache = animationCache, let animation = animationCache.animation(forKey: url.absoluteString) {
+    if let animationCache, let animation = animationCache.animation(forKey: url.absoluteString) {
       closure(animation)
     } else {
       let task = session.dataTask(with: url) { data, _, error in
@@ -314,4 +315,6 @@ extension LottieAnimation {
 /// This retroactive conformance is safe because Sendable is a marker protocol that doesn't
 /// include any runtime component. Multiple modules in the same package graph can provide this
 /// conformance without causing any conflicts.
+///
+// swiftlint:disable:next no_unchecked_sendable
 extension Foundation.Bundle: @unchecked Sendable { }

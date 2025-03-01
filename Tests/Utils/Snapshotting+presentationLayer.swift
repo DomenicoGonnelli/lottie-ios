@@ -11,12 +11,13 @@ extension Snapshotting where Value == UIView, Format == UIImage {
   /// which reflects the current state of any in-flight animations.
   static func imageOfPresentationLayer(
     precision: Float = 1,
+    perceptualPrecision: Float = 1,
     traits: UITraitCollection = .init())
     -> Snapshotting<UIView, UIImage>
   {
     // Use the SnapshotTesting framework's base `SimplySnapshot.image`
     // implementation for creating and diffing image files
-    SimplySnapshotting.image(precision: precision, scale: traits.displayScale)
+    SimplySnapshotting.image(precision: precision, perceptualPrecision: perceptualPrecision, scale: traits.displayScale)
       // Convert the input `UIView` into a `UIImage`
       // by creating and then rendering its `layer.presentation()`
       .pullback { (view: UIView) -> UIImage in
@@ -36,11 +37,9 @@ extension Snapshotting where Value == UIView, Format == UIImage {
           fatalError("Presentation layer does not exist and cannot be snapshot")
         }
 
-        let image = UIGraphicsImageRenderer(bounds: view.bounds).image { context in
+        return UIGraphicsImageRenderer(bounds: view.bounds).image { context in
           presentationLayer.render(in: context.cgContext)
         }
-
-        return image
       }
   }
 }
